@@ -1,0 +1,38 @@
+---
+title: "Group_Project"
+output:
+  pdf_document: default
+  html_document: default
+editor_options: 
+  chunk_output_type: console
+---
+Set Up
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(here)
+```
+
+
+Asthma Data Exploration 
+```{r}
+# Load the Asthma dataset
+asthma_ca <- read_csv("lifetime-asthma-prevalence-by-county-2015_2022.csv")
+# Replace the incorrect character
+asthma_ca$YEARS <- iconv(asthma_ca$YEARS, from = "latin1", to = "UTF-8")
+asthma_ca$YEARS <- gsub("[^0-9-]", "-", asthma_ca$YEARS)
+
+# filter for all ages
+asthma_ca_all_ages <- asthma_ca %>% 
+  filter(`AGE GROUP` == "All ages")
+
+# filter for 2015-2016
+asthma_2015_2016 <- asthma_ca_all_ages %>% 
+  filter(YEARS == "2015-2016")
+
+# filter for 2021-2022
+asthma_2021_2022 <- asthma_ca_all_ages %>% 
+  filter(YEARS == "2021-2022")
+```
+
+
