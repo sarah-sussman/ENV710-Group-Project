@@ -35,4 +35,78 @@ asthma_2021_2022 <- asthma_ca_all_ages %>%
   filter(YEARS == "2021-2022")
 ```
 
+Pollutant data pull
+```{r}
+pm25_ca<-read_csv("pm25_CA_22.csv")
+ozone_ca<-read_csv("ozone_ca.csv")
+no2_ca<-read_csv("no2_ca.csv")
+so2_ca<-read_csv("so2_ca.csv")
+pm10_ca<-read_csv("pm10_ca.csv")
+
+View(pm25_ca)
+view(no2_ca)
+view(ozone_ca)
+view(asthma_2021_2022)
+```
+
+assessing county uniformity and reducing county data to only counties for which we have complete data
+```{r}
+unique(pm25_ca$County)
+unique(ozone_ca$County)
+#unique(no2_ca$County)
+#unique(so2_ca$County)
+unique(pm10_ca$County)
+unique(asthma_2015_2016$COUNTY)
+
+
+common_counties <- Reduce(intersect, list(unique(pm25_ca$County),
+                                          unique(ozone_ca$County),
+                                          unique(pm10_ca$County),
+                                          unique(asthma_2015_2016$COUNTY)))
+
+# Trim each dataset to only include rows with counties with complete data
+pm25_ca <- pm25_ca[pm25_ca$County %in% common_counties, ]
+ozone_ca <- ozone_ca[ozone_ca$County %in% common_counties, ]
+pm10_ca <- pm10_ca[pm10_ca$County %in% common_counties, ]
+asthma_2015_2016<- asthma_2015_2016[asthma_2015_2016$COUNTY %in% common_counties, ]
+
+```
+
+Looking at observations per county: 
+```{r}
+# Count the number of observations per county for each dataset
+pm25_county_obs <- table(pm25_ca$County)
+ozone_county_obs <- table(ozone_ca$County)
+pm10_county_obs <- table(pm10_ca$County)
+
+# Convert the counts to data frames for easier plotting
+pm25_df <- data.frame(County = names(pm25_county_obs), Observations = as.integer(pm25_county_obs))
+ozone_df <- data.frame(County = names(ozone_county_obs), Observations = as.integer(ozone_county_obs))
+pm10_df <- data.frame(County = names(pm10_county_obs), Observations = as.integer(pm10_county_obs))
+
+# Plot the distribution of observations for PM2.5
+ggplot(pm25_df, aes(x = County, y = Observations)) +
+  geom_bar(stat = "identity", fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "PM2.5 Observations per County", y = "Number of Observations") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),  # Hide x-axis labels
+        axis.title.x = element_blank())  # Hide x-axis title
+
+# Plot the distribution of observations for Ozone
+ggplot(ozone_df, aes(x = County, y = Observations)) +
+  geom_bar(stat = "identity", fill = "green", color = "black", alpha = 0.7) +
+  labs(title = "Ozone Observations per County", y = "Number of Observations") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),  # Hide x-axis labels
+        axis.title.x = element_blank())  # Hide x-axis title
+
+# Plot the distribution of observations for PM10
+ggplot(pm10_df, aes(x = County, y = Observations)) +
+  geom_bar(stat = "identity", fill = "red", color = "black", alpha = 0.7) +
+  labs(title = "PM10 Observations per County", y = "Number of Observations") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),  # Hide x-axis labels
+        axis.title.x = element_blank())  # Hide x-axis title
+
+```
 
