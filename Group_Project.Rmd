@@ -115,6 +115,10 @@ Filtering by season
 # Alter date column from 'chr' to 'date' for all pollutant
 ## PM10
 pm10_ca$Date <- as.Date(pm10_ca$Date, format = "%m/%d/%Y")
+
+##PM2.5
+pm25_ca$Date <- as.Date(pm25_ca$Date, format = "%m/%d?%Y")
+
 ## Ozone
 ozone_ca$Date <- as.Date(ozone_ca$Date, format = "%m/%d/%Y")
 
@@ -129,6 +133,8 @@ no2_ca$Date <- as.Date(no2_ca$Date, format = "%m/%d/%Y")
 ## Filter by dates
 pm10_ca_wet <- pm10_ca %>%
   filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
+pm25_ca_wet <- pm25_ca %>%
+  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
 ozone_ca_wet <- ozone_ca %>%
   filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
 so2_ca_wet <- so2_ca %>%
@@ -140,6 +146,8 @@ no2_ca_wet <- no2_ca %>%
 ## Filter by dates
 pm10_ca_dry <- pm10_ca %>%
   filter(month(Date) %in% c(5, 6, 7, 8, 9))
+pm25_ca_dry <- pm25_ca %>%
+  filter(month(Date) %in% c(5, 6, 7, 8, 9))
 ozone_ca_dry <- ozone_ca %>%
   filter(month(Date) %in% c(5, 6, 7, 8, 9))
 so2_ca_dry <-so2_ca %>%
@@ -148,8 +156,121 @@ no2_ca_dry <- no2_ca %>%
   filter(month(Date) %in% c(5, 6, 7, 8, 9))
 ```
 
-Histograms
+Looking at observations per county:
 ```{r}
+# Count the number of observations per county for each dataset
+pm10_county_obs_wet <- table(pm10_ca_wet$County)
+pm10_county_obs_dry <- table(pm10_ca_dry$County)
+
+ozone_county_obs_wet <- table(ozone_ca_wet$County)
+ozone_county_obs_dry <- table(ozone_ca_dry$County)
+
+so2_county_obs_wet <- table(so2_ca_wet$County)
+so2_county_obs_dry <- table(so2_ca_dry$County)
+
+no2_county_obs_wet <- table(no2_ca_wet$County)
+no2_county_obs_dry <- table(no2_ca_dry$County)
+
+view(pm10_county_obs_wet)
+# Convert the counts to data frames for easier plotting
+pm10_df_wet <- data.frame(County = names(pm10_county_obs_wet), Observations = as.integer(pm10_county_obs_wet))
+pm10_df_dry <- data.frame(County = names(pm10_county_obs_dry), Observations = as.integer(pm10_county_obs_dry))
+
+ozone_df_wet <- data.frame(County = names(ozone_county_obs_wet), Observations = as.integer(ozone_county_obs_wet))
+ozone_df_dry <- data.frame(County = names(ozone_county_obs_dry), Observations = as.integer(ozone_county_obs_dry))
+
+so2_df_wet <- data.frame(County = names(so2_county_obs_wet), Observations = as.integer(so2_county_obs_wet))
+so2_df_dry <- data.frame(County = names(so2_county_obs_dry), Observations = as.integer(so2_county_obs_dry))
+
+no2_df_wet <- data.frame(County = names(no2_county_obs_wet), Observations = as.integer(no2_county_obs_wet))
+no2_df_dry <- data.frame(County = names(no2_county_obs_dry), Observations = as.integer(no2_county_obs_dry))
+
+```
+
+Combine wet season pollutants into one dataframe
+Combine dry seaosn pollutants into one dataframe
+```{r}
+# Add a column to each wet season dataframe to specify the pollutant type
+pm10_df_wet <- pm10_df_wet %>% 
+  mutate(Pollutant = "PM10")
+ozone_df_wet <- ozone_df_wet %>% 
+  mutate(Pollutant = "Ozone")
+no2_df_wet <- no2_df_wet %>% 
+  mutate(Pollutant = "NO2")
+so2_df_wet <- so2_df_wet %>% 
+  mutate(Pollutant = "SO2")
+
+# Add a column to each dry season dataframe to specify the pollutant type
+pm10_df_dry <- pm10_df_dry %>%
+  mutate(Pollutant = "PM10")
+ozone_df_dry <- ozone_df_dry %>% 
+  mutate(Pollutant = "Ozone")
+no2_df_dry <- no2_df_dry %>% 
+  mutate(Pollutant = "NO2")
+so2_df_dry <- so2_df_dry %>% 
+  mutate(Pollutant = "SO2")
+
+# Combine wet season dataframes into one
+wet_season_data <- bind_rows(pm10_df_wet, ozone_df_wet, no2_df_wet, so2_df_wet)
+
+# Remove counties that do not have observations for all 4 pollutants
+complete_counties <- wet_season_data %>%
+  group_by(County) %>%
+  summarise(Unique_Pollutants = n_distinct(Pollutant)) %>%
+  filter(Unique_Pollutants == 4)
+
+# Check valid counties
+valid_counties <- complete_counties %>% 
+  pull(County)
+
+# Filter for only counties with all 4 pollutants
+wet_season_data <- wet_season_data %>%
+  filter(County %in% valid_counties)
+
+
+# Combine dry season dataframes into one
+dry_season_data <- bind_rows(pm10_df_dry, ozone_df_dry, no2_df_dry, so2_df_dry)
+
+# Remove counties that do not have observations for all 4 pollutants
+complete_counties2 <- dry_season_data %>%
+  group_by(County) %>%
+  summarise(Unique_Pollutants = n_distinct(Pollutant)) %>%
+  filter(Unique_Pollutants == 4)
+
+# Check valid counties
+valid_counties2 <- complete_counties2 %>% 
+  pull(County)
+
+# Filter for only counties with all 4 pollutants
+dry_season_data <- dry_season_data %>%
+  filter(County %in% valid_counties2)
+```
+
+Figure 1
+```{r}
+# Distribution on PM10 across counties in the wet season (Jan-April, Oct-Dec)
+#ggplot(pm10_df_wet, aes(x=County, y=Observations)) + geom_bar(stat = "identity", fill="lightblue", color = "black", alpha = 0.7) + labs(title = "PM10 Observations by County during the Wet Season", x="Counties", y = "Number of Observations") + theme_minimal()
+
+# Create a combined bar chart
+ggplot(wet_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
+  geom_bar(stat="identity", position="dodge", color="black") +
+  labs(title=" 2022 Pollutant Observations by County during the Wet Season (Jan-April, Oct-Dec)",
+       x="Counties",
+       y="Number of Observations") +
+  theme_minimal() +
+  scale_fill_manual(values=c("PM10"="lightblue", "Ozone"="lightgreen", "NO2"="orange", "SO2"="purple")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Figure 2
+```{r}
+ggplot(dry_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
+  geom_bar(stat="identity", position = "dodge", color="black") +
+  labs(title="2022 Pollutant Observations by County during the Dry Season (May-Sept)",
+       x="Counties", y="Number of Observations") +
+  theme_minimal() +
+  scale_fill_manual(values = c("PM10"="lightblue", "Ozone" = "lightgreen", "NO2"="orange", "SO2"="purple")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
