@@ -110,3 +110,46 @@ ggplot(pm10_df, aes(x = County, y = Observations)) +
 
 ```
 
+Filtering by season
+```{r}
+# Alter date column from 'chr' to 'date' for all pollutant
+## PM10
+pm10_ca$Date <- as.Date(pm10_ca$Date, format = "%m/%d/%Y")
+## Ozone
+ozone_ca$Date <- as.Date(ozone_ca$Date, format = "%m/%d/%Y")
+
+## SO2
+so2_ca$Date <- as.Date(so2_ca$Date, format = "%m/%d/%Y")
+
+## NO2
+no2_ca$Date <- as.Date(no2_ca$Date, format = "%m/%d/%Y")
+
+
+# Wet season: Oct - April
+## Filter by dates
+pm10_ca_wet <- pm10_ca %>%
+  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
+ozone_ca_wet <- ozone_ca %>%
+  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
+so2_ca_wet <- so2_ca %>%
+  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
+no2_ca_wet <- no2_ca %>%
+  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
+
+# Dry season: May - September
+## Filter by dates
+pm10_ca_dry <- pm10_ca %>%
+  filter(month(Date) %in% c(5, 6, 7, 8, 9))
+ozone_ca_dry <- ozone_ca %>%
+  filter(month(Date) %in% c(5, 6, 7, 8, 9))
+so2_ca_dry <-so2_ca %>%
+  filter(month(Date) %in% c(5, 6, 7, 8, 9))
+no2_ca_dry <- no2_ca %>%
+  filter(month(Date) %in% c(5, 6, 7, 8, 9))
+```
+
+Histograms
+```{r}
+
+```
+
