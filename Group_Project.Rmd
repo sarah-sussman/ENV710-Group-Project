@@ -22,31 +22,24 @@ asthma_ca <- read_csv("lifetime-asthma-prevalence-by-county-2015_2022.csv")
 asthma_ca$YEARS <- iconv(asthma_ca$YEARS, from = "latin1", to = "UTF-8")
 asthma_ca$YEARS <- gsub("[^0-9-]", "-", asthma_ca$YEARS)
 
-# filter for all ages
-asthma_ca_all_ages <- asthma_ca %>% 
-  filter(`AGE GROUP` == "All ages")
-
-# filter for 2015-2016
-asthma_2015_2016 <- asthma_ca_all_ages %>% 
-  filter(YEARS == "2015-2016")
-
-# filter for 2021-2022
-asthma_2021_2022 <- asthma_ca_all_ages %>% 
-  filter(YEARS == "2021-2022")
+# filter for all ages in 2021-2022
+asthma_2021_2022 <- asthma_ca %>% 
+  filter(`AGE GROUP` == "All ages", YEARS == "2021-2022") 
 ```
 
 Pollutant data pull
 ```{r}
 pm25_ca<-read_csv("pm25_CA_22.csv")
 ozone_ca<-read_csv("ozone_ca.csv")
-no2_ca<-read_csv("no2_ca.csv")
-so2_ca<-read_csv("so2_ca.csv")
+#no2_ca<-read_csv("no2_ca.csv")
+#so2_ca<-read_csv("so2_ca.csv") 
+# we later decided to exclude NO2 and SO2 due to incomplete data
 pm10_ca<-read_csv("pm10_ca.csv")
 
-View(pm25_ca)
-view(no2_ca)
-view(ozone_ca)
-view(asthma_2021_2022)
+#View(pm25_ca)
+#view(no2_ca)
+#view(ozone_ca)
+#view(asthma_2021_2022)
 ```
 
 assessing county uniformity and reducing county data to only counties for which we have complete data
@@ -56,19 +49,18 @@ unique(ozone_ca$County)
 #unique(no2_ca$County)
 #unique(so2_ca$County)
 unique(pm10_ca$County)
-unique(asthma_2015_2016$COUNTY)
-
+unique(asthma_2021_2022$COUNTY)
 
 common_counties <- Reduce(intersect, list(unique(pm25_ca$County),
                                           unique(ozone_ca$County),
                                           unique(pm10_ca$County),
-                                          unique(asthma_2015_2016$COUNTY)))
+                                          unique(asthma_2021_2022$COUNTY)))
 
 # Trim each dataset to only include rows with counties with complete data
 pm25_ca <- pm25_ca[pm25_ca$County %in% common_counties, ]
 ozone_ca <- ozone_ca[ozone_ca$County %in% common_counties, ]
 pm10_ca <- pm10_ca[pm10_ca$County %in% common_counties, ]
-asthma_2015_2016<- asthma_2015_2016[asthma_2015_2016$COUNTY %in% common_counties, ]
+asthma_2021_2022<- asthma_2021_2022[asthma_2021_2022$COUNTY %in% common_counties, ]
 
 ```
 
@@ -80,9 +72,12 @@ ozone_county_obs <- table(ozone_ca$County)
 pm10_county_obs <- table(pm10_ca$County)
 
 # Convert the counts to data frames for easier plotting
-pm25_df <- data.frame(County = names(pm25_county_obs), Observations = as.integer(pm25_county_obs))
-ozone_df <- data.frame(County = names(ozone_county_obs), Observations = as.integer(ozone_county_obs))
-pm10_df <- data.frame(County = names(pm10_county_obs), Observations = as.integer(pm10_county_obs))
+pm25_df <- data.frame(County = names(pm25_county_obs), 
+                      Observations = as.integer(pm25_county_obs))
+ozone_df <- data.frame(County = names(ozone_county_obs), 
+                       Observations = as.integer(ozone_county_obs))
+pm10_df <- data.frame(County = names(pm10_county_obs), 
+                      Observations = as.integer(pm10_county_obs))
 
 # Plot the distribution of observations for PM2.5
 ggplot(pm25_df, aes(x = County, y = Observations)) +
@@ -122,12 +117,6 @@ pm25_ca$Date <- as.Date(pm25_ca$Date, format = "%m/%d/%Y")
 ## Ozone
 ozone_ca$Date <- as.Date(ozone_ca$Date, format = "%m/%d/%Y")
 
-## SO2
-so2_ca$Date <- as.Date(so2_ca$Date, format = "%m/%d/%Y")
-
-## NO2
-no2_ca$Date <- as.Date(no2_ca$Date, format = "%m/%d/%Y")
-
 
 # Wet season: Oct - April
 ## Filter by dates
@@ -137,10 +126,7 @@ pm25_ca_wet <- pm25_ca %>%
   filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
 ozone_ca_wet <- ozone_ca %>%
   filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
-so2_ca_wet <- so2_ca %>%
-  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
-no2_ca_wet <- no2_ca %>%
-  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
+
 
 # Dry season: May - September
 ## Filter by dates
@@ -149,10 +135,6 @@ pm10_ca_dry <- pm10_ca %>%
 pm25_ca_dry <- pm25_ca %>%
   filter(month(Date) %in% c(5, 6, 7, 8, 9))
 ozone_ca_dry <- ozone_ca %>%
-  filter(month(Date) %in% c(5, 6, 7, 8, 9))
-so2_ca_dry <-so2_ca %>%
-  filter(month(Date) %in% c(5, 6, 7, 8, 9))
-no2_ca_dry <- no2_ca %>%
   filter(month(Date) %in% c(5, 6, 7, 8, 9))
 ```
 
@@ -168,12 +150,6 @@ pm25_county_obs_dry <- table(pm25_ca_dry$County)
 ozone_county_obs_wet <- table(ozone_ca_wet$County)
 ozone_county_obs_dry <- table(ozone_ca_dry$County)
 
-so2_county_obs_wet <- table(so2_ca_wet$County)
-so2_county_obs_dry <- table(so2_ca_dry$County)
-
-no2_county_obs_wet <- table(no2_ca_wet$County)
-no2_county_obs_dry <- table(no2_ca_dry$County)
-
 # Convert the counts to data frames for easier plotting
 pm10_df_wet <- data.frame(County = names(pm10_county_obs_wet), Observations = as.integer(pm10_county_obs_wet))
 pm10_df_dry <- data.frame(County = names(pm10_county_obs_dry), Observations = as.integer(pm10_county_obs_dry))
@@ -183,13 +159,6 @@ pm25_df_dry <- data.frame(County = names(pm25_county_obs_dry), Observations = as
 
 ozone_df_wet <- data.frame(County = names(ozone_county_obs_wet), Observations = as.integer(ozone_county_obs_wet))
 ozone_df_dry <- data.frame(County = names(ozone_county_obs_dry), Observations = as.integer(ozone_county_obs_dry))
-
-so2_df_wet <- data.frame(County = names(so2_county_obs_wet), Observations = as.integer(so2_county_obs_wet))
-so2_df_dry <- data.frame(County = names(so2_county_obs_dry), Observations = as.integer(so2_county_obs_dry))
-
-no2_df_wet <- data.frame(County = names(no2_county_obs_wet), Observations = as.integer(no2_county_obs_wet))
-no2_df_dry <- data.frame(County = names(no2_county_obs_dry), Observations = as.integer(no2_county_obs_dry))
-
 ```
 
 Combine wet season pollutants into one dataframe
@@ -202,10 +171,6 @@ pm25_df_wet <- pm25_df_wet %>%
   mutate(Pollutant = "PM2.5")
 ozone_df_wet <- ozone_df_wet %>% 
   mutate(Pollutant = "Ozone")
-no2_df_wet <- no2_df_wet %>% 
-  mutate(Pollutant = "NO2")
-so2_df_wet <- so2_df_wet %>% 
-  mutate(Pollutant = "SO2")
 
 # Add a column to each dry season dataframe to specify the pollutant type
 pm10_df_dry <- pm10_df_dry %>%
@@ -214,37 +179,32 @@ pm25_df_dry <- pm25_df_dry %>%
   mutate(Pollutant = "PM2.5")
 ozone_df_dry <- ozone_df_dry %>% 
   mutate(Pollutant = "Ozone")
-no2_df_dry <- no2_df_dry %>% 
-  mutate(Pollutant = "NO2")
-so2_df_dry <- so2_df_dry %>% 
-  mutate(Pollutant = "SO2")
 
 # Combine wet season dataframes into one
-wet_season_data <- bind_rows(pm10_df_wet, pm25_df_wet, ozone_df_wet, no2_df_wet, so2_df_wet)
+wet_season_data <- bind_rows(pm10_df_wet, pm25_df_wet, ozone_df_wet)
 
-# Remove counties that do not have observations for all 4 pollutants
+# Remove counties that do not have observations for all 3 pollutants
 complete_counties <- wet_season_data %>%
   group_by(County) %>%
   summarise(Unique_Pollutants = n_distinct(Pollutant)) %>%
-  filter(Unique_Pollutants == 5)
+  filter(Unique_Pollutants == 3)
 
 # Check valid counties
 valid_counties <- complete_counties %>% 
   pull(County)
 
-# Filter for only counties with all 4 pollutants
+# Filter for only counties with all 3 pollutants
 wet_season_data <- wet_season_data %>%
   filter(County %in% valid_counties)
 
-
 # Combine dry season dataframes into one
-dry_season_data <- bind_rows(pm10_df_dry,pm25_df_dry ,ozone_df_dry, no2_df_dry, so2_df_dry)
+dry_season_data <- bind_rows(pm10_df_dry,pm25_df_dry,ozone_df_dry)
 
 # Remove counties that do not have observations for all 4 pollutants
 complete_counties2 <- dry_season_data %>%
   group_by(County) %>%
   summarise(Unique_Pollutants = n_distinct(Pollutant)) %>%
-  filter(Unique_Pollutants == 4)
+  filter(Unique_Pollutants == 3)
 
 # Check valid counties
 valid_counties2 <- complete_counties2 %>% 
@@ -267,7 +227,7 @@ ggplot(wet_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
        x="Counties",
        y="Number of Observations") +
   theme_minimal() +
-  scale_fill_manual(values=c("PM10"="lightblue", "Ozone"="lightgreen", "NO2"="orange", "SO2"="purple", "PM2.5" = "pink")) +
+  scale_fill_manual(values=c("PM10"="lightblue", "Ozone"="lightgreen", "PM2.5" = "pink")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
@@ -278,7 +238,7 @@ ggplot(dry_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
   labs(title="2022 Pollutant Observations by County during the Dry Season (May-Sept)",
        x="Counties", y="Number of Observations") +
   theme_minimal() +
-  scale_fill_manual(values = c("PM10"="lightblue", "Ozone" = "lightgreen", "NO2"="orange", "SO2"="purple", "PM2.5" = "pink")) +
+  scale_fill_manual(values = c("PM10"="lightblue", "Ozone" = "lightgreen", "PM2.5" = "pink")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
