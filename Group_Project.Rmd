@@ -11,6 +11,7 @@ editor_options:
 library(tidyverse)
 library(ggplot2)
 library(here)
+library(corrr)
 ```
 
 # Asthma Data Exploration 
@@ -63,7 +64,7 @@ asthma_2021_2022<- asthma_2021_2022[asthma_2021_2022$COUNTY %in% common_counties
 
 ```
 
-## Air Quality Observations
+## Plot by Annual Observations
 Looking at observations per county: 
 ```{r}
 # Count the number of observations per county for each dataset
@@ -105,6 +106,7 @@ ggplot(pm10_df, aes(x = County, y = Observations)) +
 
 ```
 
+## Plot by Seasonal Observations
 Filtering by season
 ```{r}
 # Alter date column from 'chr' to 'date' for all pollutant
@@ -215,7 +217,6 @@ dry_season_data <- dry_season_data %>%
   filter(County %in% valid_counties2)
 ```
 
-## Air Quality Observation Visualization 
 Figure 1
 ```{r}
 # Distribution on PM10 across counties in the wet season (Jan-April, Oct-Dec)
@@ -243,4 +244,96 @@ ggplot(dry_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
+## Set a Threshold
+```{r}
+# Apply a 10% threshold for each pollutant to 
+# remove counties with too few observations
+ozone_threshold <- quantile(ozone_df$Observations, 0.10)
+pm25_threshold <- quantile(pm25_df$Observations, 0.10)
+pm10_threshold <- quantile(pm10_df$Observations, 0.10)
+
+# filter datasets
+ozone_10percent <- ozone_df %>%
+  filter(Observations >= ozone_threshold)
+
+pm25_10percent <- pm25_df %>%
+  filter(Observations >= pm25_threshold)
+
+pm10_10percent <- pm10_df %>%
+  filter(Observations >= pm10_threshold)
+
+# Find common counties for each pollutants
+common_counties_2 <- Reduce(intersect,
+                            list(ozone_10percent$County,
+                                 pm25_10percent$County,
+                                 pm10_10percent$County))
+
+# Filter the full datasets
+ozone_ca <- ozone_ca %>% filter(County %in% common_counties_2)
+pm25_ca <- pm25_ca %>% filter(County %in% common_counties_2)
+pm10_ca <- pm10_ca %>% filter(County %in% common_counties_2)
+
+```
+
+## Correlations (Pearson's r) between Ozone and PMs
+```{r}
+# Calculate mean pollutant levels per county
+ozone_summary <- ozone_ca %>% 
+  group_by(County) %>% 
+  summarise(Ozone = mean(`Daily Max 8-hour Ozone Concentration`, na.rm = TRUE))
+pm25_summary <- pm25_ca %>% 
+  group_by(County) %>% 
+  summarise(PM2.5 = mean(`Daily Mean PM2.5 Concentration`, na.rm = TRUE))
+pm10_summary <- pm10_ca %>% 
+  group_by(County) %>% 
+  summarise(PM10 = mean(`Daily Mean PM10 Concentration`, na.rm = TRUE))
+
+# Merge all 3 pollutant into one dataframe
+all_pollutat_summary <- ozone_summary %>%
+  inner_join(pm25_summary, by = "County") %>%
+  inner_join(pm10_summary, by = "County")
+
+# Find correlation matrix
+cor_matrix <- all_pollutat_summary %>%
+  select(-County) %>%
+  correlate()
+print(cor_matrix)
+```
+The results indicate that all Pearson correlation coefficients (r-values) are below 0.8, meaning that ozone and particulate matter (PM2.5 and PM10) are not strongly correlated in California. 
+
+## Visualizing Pairwise Correaltions
+```{r}
+# Ozone vs. PM2.5
+ggplot(all_pollutat_summary, aes(x = PM2.5, y = Ozone)) +
+  geom_point(alpha = 0.7, color = "blue") +
+  geom_smooth(method = "lm", color = "black", se = FALSE) +
+  labs(title = "Concentrations of Ozone vs. PM2.5", 
+       x = "PM2.5 (µg/m³)", 
+       y = "Ozone (ppm)") +
+  theme_minimal()
+
+# Ozone vs. PM10
+ggplot(all_pollutat_summary, aes(x = PM10, y = Ozone)) +
+  geom_point(alpha = 0.7, color = "blue") +
+  geom_smooth(method = "lm", color = "black", se = FALSE) +
+  labs(title = "Concentrations of Ozone vs. PM10", 
+       x = "PM10 (µg/m³)", 
+       y = "Ozone (ppm)") +
+  theme_minimal() 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
