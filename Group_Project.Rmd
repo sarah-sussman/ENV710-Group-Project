@@ -6,15 +6,14 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
-Set Up
+# Set Up
 ```{r}
 library(tidyverse)
 library(ggplot2)
 library(here)
 ```
 
-
-Asthma Data Exploration 
+# Asthma Data Exploration 
 ```{r}
 # Load the Asthma dataset
 asthma_ca <- read_csv("lifetime-asthma-prevalence-by-county-2015_2022.csv")
@@ -27,7 +26,7 @@ asthma_2021_2022 <- asthma_ca %>%
   filter(`AGE GROUP` == "All ages", YEARS == "2021-2022") 
 ```
 
-Pollutant data pull
+# Air Quality Data Exploration
 ```{r}
 pm25_ca<-read_csv("pm25_CA_22.csv")
 ozone_ca<-read_csv("ozone_ca.csv")
@@ -64,6 +63,7 @@ asthma_2021_2022<- asthma_2021_2022[asthma_2021_2022$COUNTY %in% common_counties
 
 ```
 
+## Air Quality Observations
 Looking at observations per county: 
 ```{r}
 # Count the number of observations per county for each dataset
@@ -215,6 +215,7 @@ dry_season_data <- dry_season_data %>%
   filter(County %in% valid_counties2)
 ```
 
+## Air Quality Observation Visualization 
 Figure 1
 ```{r}
 # Distribution on PM10 across counties in the wet season (Jan-April, Oct-Dec)
