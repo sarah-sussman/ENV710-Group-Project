@@ -8,6 +8,7 @@ editor_options:
 ---
 # Set Up
 ```{r}
+#install.packages("corrr")
 library(tidyverse)
 library(ggplot2)
 library(here)
@@ -310,8 +311,10 @@ ggplot(all_pollutat_summary, aes(x = PM2.5, y = Ozone)) +
   geom_smooth(method = "lm", color = "black", se = FALSE) +
   labs(title = "Concentrations of Ozone vs. PM2.5", 
        x = "PM2.5 (µg/m³)", 
-       y = "Ozone (ppm)") +
-  theme_minimal()
+       y = "Ozone (ppm)",
+       caption = "Correlation between observed annual average of Ozone and PM2.5 in 32 Californian counties 2021-2022") +  
+  theme_minimal() +
+  theme(plot.caption = element_text(hjust = 0.5)) 
 
 # Ozone vs. PM10
 ggplot(all_pollutat_summary, aes(x = PM10, y = Ozone)) +
@@ -319,10 +322,12 @@ ggplot(all_pollutat_summary, aes(x = PM10, y = Ozone)) +
   geom_smooth(method = "lm", color = "black", se = FALSE) +
   labs(title = "Concentrations of Ozone vs. PM10", 
        x = "PM10 (µg/m³)", 
-       y = "Ozone (ppm)") +
-  theme_minimal() 
-```
+       y = "Ozone (ppm)",
+       caption = "Correlation between observed annual average of Ozone and PM10 in 32 Californian counties 2021-2022") +  
+  theme_minimal() +
+  theme(plot.caption = element_text(hjust = 0.5)) 
 
+```
 
 
 
