@@ -6,16 +6,15 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
-# Set Up
+Set Up
 ```{r}
-#install.packages("corrr")
 library(tidyverse)
 library(ggplot2)
 library(here)
-library(corrr)
 ```
 
-# Asthma Data Exploration 
+
+Asthma Data Exploration 
 ```{r}
 # Load the Asthma dataset
 asthma_ca <- read_csv("lifetime-asthma-prevalence-by-county-2015_2022.csv")
@@ -23,24 +22,31 @@ asthma_ca <- read_csv("lifetime-asthma-prevalence-by-county-2015_2022.csv")
 asthma_ca$YEARS <- iconv(asthma_ca$YEARS, from = "latin1", to = "UTF-8")
 asthma_ca$YEARS <- gsub("[^0-9-]", "-", asthma_ca$YEARS)
 
-# filter for all ages in 2021-2022
-asthma_2021_2022 <- asthma_ca %>% 
-  filter(`AGE GROUP` == "All ages", YEARS == "2021-2022") 
+# filter for all ages
+asthma_ca_all_ages <- asthma_ca %>% 
+  filter(`AGE GROUP` == "All ages")
+
+# filter for 2015-2016
+asthma_2015_2016 <- asthma_ca_all_ages %>% 
+  filter(YEARS == "2015-2016")
+
+# filter for 2021-2022
+asthma_2021_2022 <- asthma_ca_all_ages %>% 
+  filter(YEARS == "2021-2022")
 ```
 
-# Air Quality Data Exploration
+Pollutant data pull
 ```{r}
 pm25_ca<-read_csv("pm25_CA_22.csv")
 ozone_ca<-read_csv("ozone_ca.csv")
-#no2_ca<-read_csv("no2_ca.csv")
-#so2_ca<-read_csv("so2_ca.csv") 
-# we later decided to exclude NO2 and SO2 due to incomplete data
+no2_ca<-read_csv("no2_ca.csv")
+so2_ca<-read_csv("so2_ca.csv")
 pm10_ca<-read_csv("pm10_ca.csv")
 
-#View(pm25_ca)
-#view(no2_ca)
-#view(ozone_ca)
-#view(asthma_2021_2022)
+View(pm25_ca)
+view(no2_ca)
+view(ozone_ca)
+view(asthma_2021_2022)
 ```
 
 assessing county uniformity and reducing county data to only counties for which we have complete data
@@ -50,22 +56,22 @@ unique(ozone_ca$County)
 #unique(no2_ca$County)
 #unique(so2_ca$County)
 unique(pm10_ca$County)
-unique(asthma_2021_2022$COUNTY)
+unique(asthma_2015_2016$COUNTY)
+
 
 common_counties <- Reduce(intersect, list(unique(pm25_ca$County),
                                           unique(ozone_ca$County),
                                           unique(pm10_ca$County),
-                                          unique(asthma_2021_2022$COUNTY)))
+                                          unique(asthma_2015_2016$COUNTY)))
 
 # Trim each dataset to only include rows with counties with complete data
 pm25_ca <- pm25_ca[pm25_ca$County %in% common_counties, ]
 ozone_ca <- ozone_ca[ozone_ca$County %in% common_counties, ]
 pm10_ca <- pm10_ca[pm10_ca$County %in% common_counties, ]
-asthma_2021_2022<- asthma_2021_2022[asthma_2021_2022$COUNTY %in% common_counties, ]
+asthma_2015_2016<- asthma_2015_2016[asthma_2015_2016$COUNTY %in% common_counties, ]
 
 ```
 
-## Plot by Annual Observations
 Looking at observations per county: 
 ```{r}
 # Count the number of observations per county for each dataset
@@ -74,14 +80,11 @@ ozone_county_obs <- table(ozone_ca$County)
 pm10_county_obs <- table(pm10_ca$County)
 
 # Convert the counts to data frames for easier plotting
-pm25_df <- data.frame(County = names(pm25_county_obs), 
-                      Observations = as.integer(pm25_county_obs))
-ozone_df <- data.frame(County = names(ozone_county_obs), 
-                       Observations = as.integer(ozone_county_obs))
-pm10_df <- data.frame(County = names(pm10_county_obs), 
-                      Observations = as.integer(pm10_county_obs))
+pm25_df <- data.frame(County = names(pm25_county_obs), Observations = as.integer(pm25_county_obs))
+ozone_df <- data.frame(County = names(ozone_county_obs), Observations = as.integer(ozone_county_obs))
+pm10_df <- data.frame(County = names(pm10_county_obs), Observations = as.integer(pm10_county_obs))
 
-# Plot the distribution of observations for PM2.5
+#   PM2.5
 ggplot(pm25_df, aes(x = County, y = Observations)) +
   geom_bar(stat = "identity", fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "PM2.5 Observations per County", y = "Number of Observations") +
@@ -89,7 +92,7 @@ ggplot(pm25_df, aes(x = County, y = Observations)) +
   theme(axis.text.x = element_blank(),  # Hide x-axis labels
         axis.title.x = element_blank())  # Hide x-axis title
 
-# Plot the distribution of observations for Ozone
+# Ozone
 ggplot(ozone_df, aes(x = County, y = Observations)) +
   geom_bar(stat = "identity", fill = "green", color = "black", alpha = 0.7) +
   labs(title = "Ozone Observations per County", y = "Number of Observations") +
@@ -97,7 +100,7 @@ ggplot(ozone_df, aes(x = County, y = Observations)) +
   theme(axis.text.x = element_blank(),  # Hide x-axis labels
         axis.title.x = element_blank())  # Hide x-axis title
 
-# Plot the distribution of observations for PM10
+#  PM10
 ggplot(pm10_df, aes(x = County, y = Observations)) +
   geom_bar(stat = "identity", fill = "red", color = "black", alpha = 0.7) +
   labs(title = "PM10 Observations per County", y = "Number of Observations") +
@@ -106,239 +109,4 @@ ggplot(pm10_df, aes(x = County, y = Observations)) +
         axis.title.x = element_blank())  # Hide x-axis title
 
 ```
-
-## Plot by Seasonal Observations
-Filtering by season
-```{r}
-# Alter date column from 'chr' to 'date' for all pollutant
-## PM10
-pm10_ca$Date <- as.Date(pm10_ca$Date, format = "%m/%d/%Y")
-
-##PM2.5
-pm25_ca$Date <- as.Date(pm25_ca$Date, format = "%m/%d/%Y")
-
-## Ozone
-ozone_ca$Date <- as.Date(ozone_ca$Date, format = "%m/%d/%Y")
-
-
-# Wet season: Oct - April
-## Filter by dates
-pm10_ca_wet <- pm10_ca %>%
-  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
-pm25_ca_wet <- pm25_ca %>%
-  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
-ozone_ca_wet <- ozone_ca %>%
-  filter(month(Date) %in% c(1, 2, 3, 4, 10, 11, 12))
-
-
-# Dry season: May - September
-## Filter by dates
-pm10_ca_dry <- pm10_ca %>%
-  filter(month(Date) %in% c(5, 6, 7, 8, 9))
-pm25_ca_dry <- pm25_ca %>%
-  filter(month(Date) %in% c(5, 6, 7, 8, 9))
-ozone_ca_dry <- ozone_ca %>%
-  filter(month(Date) %in% c(5, 6, 7, 8, 9))
-```
-
-Looking at observations per county:
-```{r}
-# Count the number of observations per county for each dataset
-pm10_county_obs_wet <- table(pm10_ca_wet$County)
-pm10_county_obs_dry <- table(pm10_ca_dry$County)
-
-pm25_county_obs_wet <- table(pm25_ca_wet$County)
-pm25_county_obs_dry <- table(pm25_ca_dry$County)
-
-ozone_county_obs_wet <- table(ozone_ca_wet$County)
-ozone_county_obs_dry <- table(ozone_ca_dry$County)
-
-# Convert the counts to data frames for easier plotting
-pm10_df_wet <- data.frame(County = names(pm10_county_obs_wet), Observations = as.integer(pm10_county_obs_wet))
-pm10_df_dry <- data.frame(County = names(pm10_county_obs_dry), Observations = as.integer(pm10_county_obs_dry))
-
-pm25_df_wet <- data.frame(County = names(pm25_county_obs_wet), Observations = as.integer(pm25_county_obs_wet))
-pm25_df_dry <- data.frame(County = names(pm25_county_obs_dry), Observations = as.integer(pm25_county_obs_dry))
-
-ozone_df_wet <- data.frame(County = names(ozone_county_obs_wet), Observations = as.integer(ozone_county_obs_wet))
-ozone_df_dry <- data.frame(County = names(ozone_county_obs_dry), Observations = as.integer(ozone_county_obs_dry))
-```
-
-Combine wet season pollutants into one dataframe
-Combine dry seaosn pollutants into one dataframe
-```{r}
-# Add a column to each wet season dataframe to specify the pollutant type
-pm10_df_wet <- pm10_df_wet %>% 
-  mutate(Pollutant = "PM10")
-pm25_df_wet <- pm25_df_wet %>%
-  mutate(Pollutant = "PM2.5")
-ozone_df_wet <- ozone_df_wet %>% 
-  mutate(Pollutant = "Ozone")
-
-# Add a column to each dry season dataframe to specify the pollutant type
-pm10_df_dry <- pm10_df_dry %>%
-  mutate(Pollutant = "PM10")
-pm25_df_dry <- pm25_df_dry %>%
-  mutate(Pollutant = "PM2.5")
-ozone_df_dry <- ozone_df_dry %>% 
-  mutate(Pollutant = "Ozone")
-
-# Combine wet season dataframes into one
-wet_season_data <- bind_rows(pm10_df_wet, pm25_df_wet, ozone_df_wet)
-
-# Remove counties that do not have observations for all 3 pollutants
-complete_counties <- wet_season_data %>%
-  group_by(County) %>%
-  summarise(Unique_Pollutants = n_distinct(Pollutant)) %>%
-  filter(Unique_Pollutants == 3)
-
-# Check valid counties
-valid_counties <- complete_counties %>% 
-  pull(County)
-
-# Filter for only counties with all 3 pollutants
-wet_season_data <- wet_season_data %>%
-  filter(County %in% valid_counties)
-
-# Combine dry season dataframes into one
-dry_season_data <- bind_rows(pm10_df_dry,pm25_df_dry,ozone_df_dry)
-
-# Remove counties that do not have observations for all 4 pollutants
-complete_counties2 <- dry_season_data %>%
-  group_by(County) %>%
-  summarise(Unique_Pollutants = n_distinct(Pollutant)) %>%
-  filter(Unique_Pollutants == 3)
-
-# Check valid counties
-valid_counties2 <- complete_counties2 %>% 
-  pull(County)
-
-# Filter for only counties with all 4 pollutants
-dry_season_data <- dry_season_data %>%
-  filter(County %in% valid_counties2)
-```
-
-Figure 1
-```{r}
-# Distribution on PM10 across counties in the wet season (Jan-April, Oct-Dec)
-#ggplot(pm10_df_wet, aes(x=County, y=Observations)) + geom_bar(stat = "identity", fill="lightblue", color = "black", alpha = 0.7) + labs(title = "PM10 Observations by County during the Wet Season", x="Counties", y = "Number of Observations") + theme_minimal()
-
-# Create a combined bar chart
-ggplot(wet_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
-  geom_bar(stat="identity", position="dodge", color="black") +
-  labs(title=" 2022 Pollutant Observations by County during the Wet Season (Jan-April, Oct-Dec)",
-       x="Counties",
-       y="Number of Observations") +
-  theme_minimal() +
-  scale_fill_manual(values=c("PM10"="lightblue", "Ozone"="lightgreen", "PM2.5" = "pink")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
-
-Figure 2
-```{r}
-ggplot(dry_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
-  geom_bar(stat="identity", position = "dodge", color="black") +
-  labs(title="2022 Pollutant Observations by County during the Dry Season (May-Sept)",
-       x="Counties", y="Number of Observations") +
-  theme_minimal() +
-  scale_fill_manual(values = c("PM10"="lightblue", "Ozone" = "lightgreen", "PM2.5" = "pink")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-```
-
-## Set a Threshold
-```{r}
-# Apply a 10% threshold for each pollutant to 
-# remove counties with too few observations
-ozone_threshold <- quantile(ozone_df$Observations, 0.10)
-pm25_threshold <- quantile(pm25_df$Observations, 0.10)
-pm10_threshold <- quantile(pm10_df$Observations, 0.10)
-
-# filter datasets
-ozone_10percent <- ozone_df %>%
-  filter(Observations >= ozone_threshold)
-
-pm25_10percent <- pm25_df %>%
-  filter(Observations >= pm25_threshold)
-
-pm10_10percent <- pm10_df %>%
-  filter(Observations >= pm10_threshold)
-
-# Find common counties for each pollutants
-common_counties_2 <- Reduce(intersect,
-                            list(ozone_10percent$County,
-                                 pm25_10percent$County,
-                                 pm10_10percent$County))
-
-# Filter the full datasets
-ozone_ca <- ozone_ca %>% filter(County %in% common_counties_2)
-pm25_ca <- pm25_ca %>% filter(County %in% common_counties_2)
-pm10_ca <- pm10_ca %>% filter(County %in% common_counties_2)
-
-```
-
-## Correlations (Pearson's r) between Ozone and PMs
-```{r}
-# Calculate mean pollutant levels per county
-ozone_summary <- ozone_ca %>% 
-  group_by(County) %>% 
-  summarise(Ozone = mean(`Daily Max 8-hour Ozone Concentration`, na.rm = TRUE))
-pm25_summary <- pm25_ca %>% 
-  group_by(County) %>% 
-  summarise(PM2.5 = mean(`Daily Mean PM2.5 Concentration`, na.rm = TRUE))
-pm10_summary <- pm10_ca %>% 
-  group_by(County) %>% 
-  summarise(PM10 = mean(`Daily Mean PM10 Concentration`, na.rm = TRUE))
-
-# Merge all 3 pollutant into one dataframe
-all_pollutat_summary <- ozone_summary %>%
-  inner_join(pm25_summary, by = "County") %>%
-  inner_join(pm10_summary, by = "County")
-
-# Find correlation matrix
-cor_matrix <- all_pollutat_summary %>%
-  select(-County) %>%
-  correlate()
-print(cor_matrix)
-```
-The results indicate that all Pearson correlation coefficients (r-values) are below 0.8, meaning that ozone and particulate matter (PM2.5 and PM10) are not strongly correlated in California. 
-
-## Visualizing Pairwise Correaltions
-```{r}
-# Ozone vs. PM2.5
-ggplot(all_pollutat_summary, aes(x = PM2.5, y = Ozone)) +
-  geom_point(alpha = 0.7, color = "blue") +
-  geom_smooth(method = "lm", color = "black", se = FALSE) +
-  labs(title = "Concentrations of Ozone vs. PM2.5", 
-       x = "PM2.5 (µg/m³)", 
-       y = "Ozone (ppm)",
-       caption = "Correlation between observed annual average of Ozone and PM2.5 in 32 Californian counties 2021-2022") +  
-  theme_minimal() +
-  theme(plot.caption = element_text(hjust = 0.5)) 
-
-# Ozone vs. PM10
-ggplot(all_pollutat_summary, aes(x = PM10, y = Ozone)) +
-  geom_point(alpha = 0.7, color = "blue") +
-  geom_smooth(method = "lm", color = "black", se = FALSE) +
-  labs(title = "Concentrations of Ozone vs. PM10", 
-       x = "PM10 (µg/m³)", 
-       y = "Ozone (ppm)",
-       caption = "Correlation between observed annual average of Ozone and PM10 in 32 Californian counties 2021-2022") +  
-  theme_minimal() +
-  theme(plot.caption = element_text(hjust = 0.5)) 
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
 
