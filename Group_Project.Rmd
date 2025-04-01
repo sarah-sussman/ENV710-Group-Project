@@ -19,7 +19,7 @@ library(readxl)
 # Asthma Data Exploration 
 ```{r}
 # Load the Asthma dataset
-asthma_ca <- read_csv("lifetime-asthma-prevalence-by-county-2015_2022.csv")
+asthma_ca <- read_csv("data/lifetime-asthma-prevalence-by-county-2015_2022.csv")
 # Replace the incorrect character
 asthma_ca$YEARS <- iconv(asthma_ca$YEARS, from = "latin1", to = "UTF-8")
 asthma_ca$YEARS <- gsub("[^0-9-]", "-", asthma_ca$YEARS)
@@ -31,12 +31,12 @@ asthma_2021_2022 <- asthma_ca %>%
 
 # Air Quality Data Exploration
 ```{r}
-pm25_ca<-read_csv("pm25_CA_22.csv")
-ozone_ca<-read_csv("ozone_ca.csv")
-#no2_ca<-read_csv("no2_ca.csv")
-#so2_ca<-read_csv("so2_ca.csv") 
+pm25_ca<-read_csv("data/pm25_CA_22.csv")
+ozone_ca<-read_csv("data/ozone_ca.csv")
+#no2_ca<-read_csv("data/no2_ca.csv")
+#so2_ca<-read_csv("data/so2_ca.csv") 
 # we later decided to exclude NO2 and SO2 due to incomplete data
-pm10_ca<-read_csv("pm10_ca.csv")
+pm10_ca<-read_csv("data/pm10_ca.csv")
 
 #View(pm25_ca)
 #view(no2_ca)
