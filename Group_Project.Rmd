@@ -6,7 +6,9 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
+
 # Set Up
+
 ```{r}
 library(tidyverse)
 library(ggplot2)
@@ -16,7 +18,8 @@ library(readr)
 library(readxl)
 ```
 
-# Asthma Data Exploration 
+# Asthma Data Exploration
+
 ```{r}
 # Load the Asthma dataset
 asthma_ca <- read_csv("data/lifetime-asthma-prevalence-by-county-2015_2022.csv")
@@ -29,7 +32,10 @@ asthma_2021_2022 <- asthma_ca %>%
   filter(`AGE GROUP` == "All ages", YEARS == "2021-2022") 
 ```
 
-# Air Quality Data Exploration
+# Data Additions and Exploration
+
+\## Air quality data
+
 ```{r}
 pm25_ca<-read_csv("data/pm25_CA_22.csv")
 ozone_ca<-read_csv("data/ozone_ca.csv")
@@ -44,10 +50,11 @@ pm10_ca<-read_csv("data/pm10_ca.csv")
 #view(asthma_2021_2022)
 ```
 
-#Temp and Precip data pull and exploration
+###Temp and Precip data pull and exploration
+
 ```{r}
-temp <- read_excel("temp.xlsx")
-precip <- read_excel("precip.xlsx")
+temp <- read_excel("data/temp.xlsx")
+precip <- read_excel("data/precip.xlsx")
 #view(temp)
 
 # Filter for California
@@ -56,7 +63,9 @@ temp_ca<- temp %>%
 
 precip_ca <- precip %>%
   filter(State == "California")
+  
 view(precip_ca)
+view(temp_ca)
 ```
 
 ```{r}
@@ -66,7 +75,41 @@ precip_ca$Name <- sub(" County$", "", precip_ca$Name)
 view(precip_ca)
 ```
 
-assessing county uniformity and reducing county data to only counties for which we have complete data
+\### Adding Vehicle and Population data:
+
+```{r}
+# Reading population and vehicle data in 
+pop_ca <- read_excel("data/co-est2023-pop-06.xlsx")
+vehicles_ca <- read.csv("data/dmv.CA.csv")
+view(pop_ca)
+view(vehicles_ca)
+```
+
+```{r}
+#cleaning population
+pop_ca <- pop_ca %>%
+  mutate(County = sub("^\\.", "", County),                # Remove leading dot
+         County = sub(" County, California$", "", County))  # Remove trailing text
+
+# Check the result
+head(pop_ca)
+
+#Cleaning Vehicles:
+vehicles_ca <- vehicles_ca %>%
+  slice(-1:-5) %>%
+  filter(Measure.Names == "Total Vehicles")
+
+vehicles_ca <- vehicles_ca %>%
+  select(-Measure.Names) %>%
+  rename(`Total Vehicles` = Measure.Values)
+
+view(vehicles_ca)
+view(pop_ca)
+
+```
+
+###assessing county uniformity and reducing county data to only counties for which we have complete data
+
 ```{r}
 # Get unique counties for temp and precip
 unique_temp_counties <- unique(temp_ca$Name)
@@ -90,7 +133,9 @@ precip_ca <- precip_ca[precip_ca$Name %in% common_counties, ]
 ```
 
 ## Plot by Annual Observations
-Looking at observations per county: 
+
+Looking at observations per county:
+
 ```{r}
 # Count the number of observations per county for each dataset
 pm25_county_obs <- table(pm25_ca$County)
@@ -132,7 +177,9 @@ ggplot(pm10_df, aes(x = County, y = Observations)) +
 ```
 
 ## Plot by Seasonal Observations
+
 Filtering by season
+
 ```{r}
 # Alter date column from 'chr' to 'date' for all pollutant
 ## PM10
@@ -166,6 +213,7 @@ ozone_ca_dry <- ozone_ca %>%
 ```
 
 Looking at observations per county:
+
 ```{r}
 # Count the number of observations per county for each dataset
 pm10_county_obs_wet <- table(pm10_ca_wet$County)
@@ -188,8 +236,8 @@ ozone_df_wet <- data.frame(County = names(ozone_county_obs_wet), Observations = 
 ozone_df_dry <- data.frame(County = names(ozone_county_obs_dry), Observations = as.integer(ozone_county_obs_dry))
 ```
 
-Combine wet season pollutants into one dataframe
-Combine dry seaosn pollutants into one dataframe
+Combine wet season pollutants into one dataframe Combine dry seaosn pollutants into one dataframe
+
 ```{r}
 # Add a column to each wet season dataframe to specify the pollutant type
 pm10_df_wet <- pm10_df_wet %>% 
@@ -243,6 +291,7 @@ dry_season_data <- dry_season_data %>%
 ```
 
 Figure 1
+
 ```{r}
 # Distribution on PM10 across counties in the wet season (Jan-April, Oct-Dec)
 #ggplot(pm10_df_wet, aes(x=County, y=Observations)) + geom_bar(stat = "identity", fill="lightblue", color = "black", alpha = 0.7) + labs(title = "PM10 Observations by County during the Wet Season", x="Counties", y = "Number of Observations") + theme_minimal()
@@ -259,6 +308,7 @@ ggplot(wet_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
 ```
 
 Figure 2
+
 ```{r}
 ggplot(dry_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
   geom_bar(stat="identity", position = "dodge", color="black") +
@@ -271,6 +321,7 @@ ggplot(dry_season_data, aes(x=County, y=Observations, fill=Pollutant)) +
 ```
 
 ## Set a Threshold
+
 ```{r}
 # Apply a 10% threshold for each pollutant to 
 # remove counties with too few observations
@@ -301,7 +352,8 @@ pm10_ca <- pm10_ca %>% filter(County %in% common_counties_2)
 
 ```
 
-## Correlations (Pearson's r) between Ozone and PMs
+## Merging final data into one DF
+
 ```{r}
 # Calculate mean pollutant levels per county
 ozone_summary <- ozone_ca %>% 
@@ -315,27 +367,89 @@ pm10_summary <- pm10_ca %>%
   summarise(PM10 = mean(`Daily Mean PM10 Concentration`, na.rm = TRUE))
 
 # Merge all 3 pollutant into one dataframe
-all_pollutat_summary <- ozone_summary %>%
+all_pollutant_summary <- ozone_summary %>%
   inner_join(pm25_summary, by = "County") %>%
   inner_join(pm10_summary, by = "County")
 
+# Rename and edit precip and temp data
+temp_ca <- temp_ca %>% 
+  rename(County = Name) %>% 
+  select(County, `1901-2000 Mean`) %>% 
+  rename(Century_Temp = `1901-2000 Mean`)
+
+precip_ca <- precip_ca %>% 
+  rename(County = Name) %>% 
+  select(County, `1901-2000 Mean`) %>% 
+  rename(Century_Precip = `1901-2000 Mean`)
+
+# Merge temperature and precipitation data on the County column
+weather_summary <- inner_join(temp_ca, precip_ca, by = "County")
+
+# Now, merge the pollutant summary (all_pollutant_summary) with the weather summary
+final_df <- all_pollutant_summary %>% 
+  inner_join(weather_summary, by = "County")
+
+view(final_df)
+
+```
+
+## Pearson's R test of all variables
+
+```{r}
+# loop function for each variable:
+# Extract only numeric columns (County is excluded)
+numeric_vars <- final_df %>% select(where(is.numeric))
+
+# Initialize an empty data frame to store results
+corr_results <- data.frame(Var1 = character(),
+                           Var2 = character(),
+                           Pearson_R = numeric(),
+                           P_Value = numeric(),
+                           stringsAsFactors = FALSE)
+
+# Loop over each pair of numeric variables
+for (i in 1:(ncol(numeric_vars)-1)) {
+  for (j in (i+1):ncol(numeric_vars)) {
+    var1 <- names(numeric_vars)[i]
+    var2 <- names(numeric_vars)[j]
+    
+    # Run Pearson's correlation test
+    test <- cor.test(numeric_vars[[i]], numeric_vars[[j]], method = "pearson")
+    corr_results <- rbind(corr_results, data.frame(Var1 = var1,
+                                                   Var2 = var2,
+                                                   Pearson_R = test$estimate,
+                                                   P_Value = test$p.value,
+                                                   stringsAsFactors = FALSE))
+  }
+}
+
+print(corr_results)
+
+```
+
+```{r}
 # Find correlation matrix
 cor_matrix <- all_pollutat_summary %>%
   select(-County) %>%
   correlate()
 print(cor_matrix)
 ```
-The results indicate that all Pearson correlation coefficients (r-values) are below 0.8, meaning that ozone and particulate matter (PM2.5 and PM10) are not strongly correlated in California. 
+
+The results indicate that all Pearson correlation coefficients (r-values) are below 0.8, meaning that ozone and particulate matter (PM2.5 and PM10) are not strongly correlated in California.
 
 ## Visualizing Pairwise Correaltions
+
 ```{r}
 # Ozone vs. PM2.5
 ggplot(all_pollutat_summary, aes(x = PM2.5, y = Ozone)) +
   geom_point(alpha = 0.7, color = "blue") +
   geom_smooth(method = "lm", color = "black", se = FALSE) +
   labs(title = "Concentrations of Ozone vs. PM2.5", 
-       x = "PM2.5 (µg/m³)", 
-       y = "Ozone (ppm)") +
+       x = "PM2.5 (µg/m³)",
+```
+
+```{r}
+y = "Ozone (ppm)") +
   theme_minimal()
 
 # Ozone vs. PM10
@@ -347,5 +461,3 @@ ggplot(all_pollutat_summary, aes(x = PM10, y = Ozone)) +
        y = "Ozone (ppm)") +
   theme_minimal() 
 ```
-
-
