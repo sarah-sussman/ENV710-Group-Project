@@ -64,15 +64,12 @@ temp_ca<- temp %>%
 precip_ca <- precip %>%
   filter(State == "California")
   
-view(precip_ca)
-view(temp_ca)
 ```
 
 ```{r}
 # Remove " County" from the County column in temp and precip
 temp_ca$Name <- sub(" County$", "", temp_ca$Name)
 precip_ca$Name <- sub(" County$", "", precip_ca$Name)
-view(precip_ca)
 ```
 
 \### Adding Vehicle and Population data:
@@ -81,8 +78,7 @@ view(precip_ca)
 # Reading population and vehicle data in 
 pop_ca <- read_excel("data/co-est2023-pop-06.xlsx")
 vehicles_ca <- read.csv("data/dmv.CA.csv")
-view(pop_ca)
-view(vehicles_ca)
+
 ```
 
 ```{r}
@@ -90,9 +86,6 @@ view(vehicles_ca)
 pop_ca <- pop_ca %>%
   mutate(County = sub("^\\.", "", County),                # Remove leading dot
          County = sub(" County, California$", "", County))  # Remove trailing text
-
-# Check the result
-head(pop_ca)
 
 #Cleaning Vehicles:
 vehicles_ca <- vehicles_ca %>%
@@ -103,8 +96,11 @@ vehicles_ca <- vehicles_ca %>%
   select(-Measure.Names) %>%
   rename(`Total Vehicles` = Measure.Values)
 
+#standardizing County Name
+vehicles_ca <- vehicles_ca %>%
+  rename(`County` = Counties)
+
 view(vehicles_ca)
-view(pop_ca)
 
 ```
 
@@ -115,13 +111,14 @@ view(pop_ca)
 unique_temp_counties <- unique(temp_ca$Name)
 unique_precip_counties <- unique(precip_ca$Name)
 
-# Get common counties across all datasets
+# Get common counties across all datasets, including pop_ca and vehicles_ca
 common_counties <- Reduce(intersect, list(unique(pm25_ca$County),
-                                          unique(ozone_ca$County),
-                                          unique(pm10_ca$County),
-                                          unique(asthma_2021_2022$COUNTY),
-                                          unique_temp_counties,
-                                          unique_precip_counties))
+                                            unique(ozone_ca$County),
+                                            unique(pm10_ca$County),
+                                            unique(asthma_2021_2022$COUNTY),
+                                            unique_temp_counties,
+                                            unique_precip_counties))
+
 
 # Filter each dataset to include only rows with common counties
 pm25_ca <- pm25_ca[pm25_ca$County %in% common_counties, ]
@@ -130,6 +127,13 @@ pm10_ca <- pm10_ca[pm10_ca$County %in% common_counties, ]
 asthma_2021_2022 <- asthma_2021_2022[asthma_2021_2022$COUNTY %in% common_counties, ]
 temp_ca <- temp_ca[temp_ca$Name %in% common_counties, ]
 precip_ca <- precip_ca[precip_ca$Name %in% common_counties, ]
+```
+
+```{r}
+view(pop_ca)
+view(vehicles_ca)
+view(temp_ca)
+view(pm25_ca)
 ```
 
 ## Plot by Annual Observations
@@ -388,6 +392,36 @@ weather_summary <- inner_join(temp_ca, precip_ca, by = "County")
 # Now, merge the pollutant summary (all_pollutant_summary) with the weather summary
 final_df <- all_pollutant_summary %>% 
   inner_join(weather_summary, by = "County")
+
+
+```
+
+```{r}
+#need to shorten to just the common counties
+pop_ca <- pop_ca[pop_ca$County %in% common_counties, ]
+
+common_counties <- toupper(common_counties)
+vehicles_ca <- vehicles_ca[vehicles_ca$County %in% common_counties, ]
+
+view(final_df)
+view(pop_ca)
+view(vehicles_ca)
+
+#ISSUE IS WITH VEHICLES NO MEETING THE COMMON COUNTIES BECAUSE ITS UPPERCASE
+
+```
+
+```{r}
+
+ #Ensure County names are standardized in all data frames
+final_df <- final_df %>% mutate(County = toupper(County))
+pop_ca   <- pop_ca %>% mutate(County = toupper(County))
+vehicles_ca <- vehicles_ca %>% mutate(County = toupper(County))
+
+# Merge pop_ca with final_df first, then merge vehicles_ca
+final_df <- final_df %>% 
+  inner_join(pop_ca, by = "County") %>%
+  inner_join(vehicles_ca, by = "County")
 
 view(final_df)
 
