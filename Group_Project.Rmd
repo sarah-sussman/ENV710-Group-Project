@@ -29,7 +29,13 @@ asthma_ca$YEARS <- gsub("[^0-9-]", "-", asthma_ca$YEARS)
 
 # filter for all ages in 2021-2022
 asthma_2021_2022 <- asthma_ca %>% 
-  filter(`AGE GROUP` == "All ages", YEARS == "2021-2022") 
+  filter(`AGE GROUP` == "All ages", YEARS == "2021-2022") %>%
+  rename(County = COUNTY)
+
+#getting rid of other columns
+asthma_2021_2022 <- asthma_2021_2022 %>% 
+  select(County, `LIFETIME PREVALENCE`)
+
 ```
 
 # Data Additions and Exploration
@@ -100,11 +106,15 @@ vehicles_ca <- vehicles_ca %>%
 vehicles_ca <- vehicles_ca %>%
   rename(`County` = Counties)
 
-view(vehicles_ca)
+
 
 ```
 
 ###assessing county uniformity and reducing county data to only counties for which we have complete data
+
+```{r}
+view(asthma_2021_2022)
+```
 
 ```{r}
 # Get unique counties for temp and precip
@@ -115,7 +125,7 @@ unique_precip_counties <- unique(precip_ca$Name)
 common_counties <- Reduce(intersect, list(unique(pm25_ca$County),
                                             unique(ozone_ca$County),
                                             unique(pm10_ca$County),
-                                            unique(asthma_2021_2022$COUNTY),
+                                            unique(asthma_2021_2022$County),
                                             unique_temp_counties,
                                             unique_precip_counties))
 
@@ -124,16 +134,9 @@ common_counties <- Reduce(intersect, list(unique(pm25_ca$County),
 pm25_ca <- pm25_ca[pm25_ca$County %in% common_counties, ]
 ozone_ca <- ozone_ca[ozone_ca$County %in% common_counties, ]
 pm10_ca <- pm10_ca[pm10_ca$County %in% common_counties, ]
-asthma_2021_2022 <- asthma_2021_2022[asthma_2021_2022$COUNTY %in% common_counties, ]
+asthma_2021_2022 <- asthma_2021_2022[asthma_2021_2022$County %in% common_counties, ]
 temp_ca <- temp_ca[temp_ca$Name %in% common_counties, ]
 precip_ca <- precip_ca[precip_ca$Name %in% common_counties, ]
-```
-
-```{r}
-view(pop_ca)
-view(vehicles_ca)
-view(temp_ca)
-view(pm25_ca)
 ```
 
 ## Plot by Annual Observations
@@ -397,7 +400,7 @@ final_df <- all_pollutant_summary %>%
 ```
 
 ```{r}
-#need to shorten to just the common counties
+#need to shorten new DFs to just the common counties
 pop_ca <- pop_ca[pop_ca$County %in% common_counties, ]
 
 common_counties <- toupper(common_counties)
@@ -406,9 +409,6 @@ vehicles_ca <- vehicles_ca[vehicles_ca$County %in% common_counties, ]
 view(final_df)
 view(pop_ca)
 view(vehicles_ca)
-
-#ISSUE IS WITH VEHICLES NO MEETING THE COMMON COUNTIES BECAUSE ITS UPPERCASE
-
 ```
 
 ```{r}
@@ -417,14 +417,19 @@ view(vehicles_ca)
 final_df <- final_df %>% mutate(County = toupper(County))
 pop_ca   <- pop_ca %>% mutate(County = toupper(County))
 vehicles_ca <- vehicles_ca %>% mutate(County = toupper(County))
+asthma_2021_2022 <- asthma_2021_2022 %>% mutate(County = toupper(County))
 
+
+```
+
+```{r}
 # Merge pop_ca with final_df first, then merge vehicles_ca
 final_df <- final_df %>% 
   inner_join(pop_ca, by = "County") %>%
-  inner_join(vehicles_ca, by = "County")
+  inner_join(vehicles_ca, by = "County") %>%
+  inner_join(asthma_2021_2022, by = 'County')
 
 view(final_df)
-
 ```
 
 ## Pearson's R test of all variables
@@ -463,15 +468,15 @@ print(corr_results)
 
 ```{r}
 # Find correlation matrix
-cor_matrix <- all_pollutat_summary %>%
+cor_matrix <- final_df %>%
   select(-County) %>%
   correlate()
 print(cor_matrix)
 ```
 
-The results indicate that all Pearson correlation coefficients (r-values) are below 0.8, meaning that ozone and particulate matter (PM2.5 and PM10) are not strongly correlated in California.
+The results indicate that all Pearson correlation coefficients (r-values) are below 0.8 EXCEPT population and vehicles.
 
-## Visualizing Pairwise Correaltions
+## Visualizing Pairwise Correlations
 
 ```{r}
 # Ozone vs. PM2.5
@@ -494,4 +499,42 @@ ggplot(all_pollutat_summary, aes(x = PM10, y = Ozone)) +
        x = "PM10 (µg/m³)", 
        y = "Ozone (ppm)") +
   theme_minimal() 
+
+```
+
+## For loop to plot variables against Asthma
+
+```{r}
+#Variable list
+numeric_vars <- c("Ozone", "PM2.5", "PM10", "Century_Temp", 
+                  "Century_Precip", "Population", "Total Vehicles")
+
+# For loop for plotting
+for (var in numeric_vars) {
+  plot(final_df$`LIFETIME PREVALENCE`, final_df[[var]],
+       xlab = "LIFETIME PREVALENCE",
+       ylab = var,
+       main = paste(var, "vs. LIFETIME PREVALENCE"))
+}
+
+
+```
+
+# Regression Models
+
+```{r}
+# Only air quality variables
+model_pollutants <- lm(`LIFETIME PREVALENCE` ~ Ozone + `PM2.5` + PM10, data = final_df)
+
+# Full model using all predictors
+model_pop <- lm(`LIFETIME PREVALENCE` ~ Ozone + `PM2.5` + PM10 + Century_Temp +
+                   Century_Precip + Population, data = final_df)
+
+# Full model using all predictors
+model_veh <- lm(`LIFETIME PREVALENCE` ~ Ozone + `PM2.5` + PM10 + Century_Temp +
+                   Century_Precip + `Total Vehicles`, data = final_df)
+
+summary(model_pollutants)
+summary(model_pop)
+summary(model_veh)
 ```
