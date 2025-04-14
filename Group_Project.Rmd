@@ -580,7 +580,22 @@ final_df_log$log_Temp <- log(final_df$Century_Temp)
 final_df_log$log_Precip <- log(final_df$Century_Precip)
 final_df_log$log_Population <- log(final_df$Population)
 
-# Run the model
+# 3 separate regression models log transformed
+lm_PM2.5_log <- lm(`LIFETIME PREVALENCE` ~ log_PM2.5 + log_Temp + 
+                     log_Precip + log_Population, data = final_df_log)
+summary(lm_PM2.5_log)
+
+
+lm_PM10_log <- lm(`LIFETIME PREVALENCE` ~ log_PM10 + log_Temp + 
+                     log_Precip + log_Population, data = final_df_log)
+summary(lm_PM10_log)
+
+
+lm_ozone_log <- lm(`LIFETIME PREVALENCE` ~ Ozone + log_Temp + 
+                     log_Precip + log_Population, data = final_df_log)
+summary(lm_ozone_log)
+
+# Run the full model
 lm_all_log <- lm(`LIFETIME PREVALENCE` ~ log_Ozone + log_PM2.5 + log_PM10 + 
                    log_Temp + log_Precip + log_Population, data = final_df_log)
 summary(lm_all_log)
@@ -589,8 +604,15 @@ summary(lm_all_log)
 # Evaluate Model Diagnostic
 
 ```{r}
-AIC(lm_all)
-AIC(lm_all_log)
+AIC(lm_PM2.5)
+AIC(lm_PM2.5_log)
+
+AIC(lm_PM10)
+AIC(lm_PM10_log)
+
+AIC(lm_ozone)
+AIC(lm_ozone_log)
+
 plot(lm_all)
 plot(lm_all_log)
 ```
