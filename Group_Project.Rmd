@@ -591,7 +591,7 @@ lm_PM10_log <- lm(`LIFETIME PREVALENCE` ~ log_PM10 + log_Temp +
 summary(lm_PM10_log)
 
 
-lm_ozone_log <- lm(`LIFETIME PREVALENCE` ~ Ozone + log_Temp + 
+lm_ozone_log <- lm(`LIFETIME PREVALENCE` ~ log_Ozone + log_Temp + 
                      log_Precip + log_Population, data = final_df_log)
 summary(lm_ozone_log)
 
