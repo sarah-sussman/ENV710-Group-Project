@@ -617,4 +617,22 @@ plot(lm_all)
 plot(lm_all_log)
 ```
 
+# Use predict to simulate model predctability
+
+```{r}
+# Use predict to simulate model predictability
+final_df_log$predicted <- predict(lm_all_log)
+ggplot(final_df_log, aes(x = LIFETIME PREVALENCE, y = predicted)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "darkgreen", linewidth = 1) +
+  labs(
+    x = "Observed Lifetime Prevalence of Asthma",
+    y = "Predicted Lifetime Prevalence of Asthma"
+  ) +
+  theme_minimal()
+
+rmse <- sqrt(mean((final_df_log$LIFETIME PREVALENCE - final_df_log$predicted)^2))
+print(rmse)
+```
+
 
